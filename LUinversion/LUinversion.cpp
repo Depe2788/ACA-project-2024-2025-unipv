@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>  // Aggiungi questa libreria per misurare il tempo
+#include <time.h>  // Libreria per misurare il tempo di esecuzione
 
 // Funzione per leggere una matrice quadrata da un file
 void readMatrix(double** matrix, FILE* file, int n) {
+
     int i, j;
 
     for (i = 0; i < n; i++) {
+        //Alloco spazio per i singoli elementi
         matrix[i] = (double*)malloc(n * sizeof(double));
         if (matrix[i] == NULL) {
             printf("Errore: impossibile allocare memoria per la riga %d.\n", i);
@@ -24,7 +26,7 @@ void readMatrix(double** matrix, FILE* file, int n) {
     }
 }
 
-/* The opposite operation of readMatrix. Stores a matrix into a file, element by element */
+// Funzione per memorizzare una matrice in un file, elemento per elemento 
 void printMatrix(double** matrix, int n, FILE* file) {
     int i, j;
 
@@ -38,14 +40,20 @@ void printMatrix(double** matrix, int n, FILE* file) {
 
 // Funzione per eseguire la fattorizzazione LU
 void luDecomposition(double** matrix, double** L, double** U, int size) {
+    clock_t start = clock(); 
+
+    //Outer loop
     for (int i = 0; i < size; i++) {
+
+        //First inner loop
         for (int j = i; j < size; j++) {
-            U[i][j] = matrix[i][j];
+            U[i][j] = matrix[i][j];         
             for (int k = 0; k < i; k++) {
                 U[i][j] -= L[i][k] * U[k][j];
             }
         }
 
+        //Second inner loop
         for (int j = i; j < size; j++) {
             if (i == j)
                 L[i][i] = 1;
@@ -58,6 +66,10 @@ void luDecomposition(double** matrix, double** L, double** U, int size) {
             }
         }
     }
+
+    clock_t end = clock(); 
+    double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("Decomposizione LU: %f secondi\n", time_taken);
 }
 
 // Funzione per risolvere il sistema LY = B (sostituzione in avanti)
@@ -96,6 +108,9 @@ void invertMatrixLU(double** matrix, double** inverse, int size) {
     double* Y = (double*)malloc(size * sizeof(double));
     double* X = (double*)malloc(size * sizeof(double));
 
+    clock_t start = clock();
+
+
     for (int col = 0; col < size; col++) {
         for (int i = 0; i < size; i++) {
             B[i] = (i == col) ? 1.0 : 0.0;
@@ -109,6 +124,11 @@ void invertMatrixLU(double** matrix, double** inverse, int size) {
         }
     }
 
+    clock_t end = clock();  // Fine del profiling
+    double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("Forward e backward: %f secondi\n", time_taken);
+
+
     for (int i = 0; i < size; i++) {
         free(L[i]);
         free(U[i]);
@@ -121,8 +141,8 @@ void invertMatrixLU(double** matrix, double** inverse, int size) {
 }
 
 int main(int argc, char* argv[]) {
+
     if (argc != 2) {
-        printf("Uso: %s <file_matrice>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -140,7 +160,7 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Allocazione della matrice
+    // Allocazione della matrice. 
     double** matrix = (double**)malloc(n * sizeof(double*));
     if (matrix == NULL) {
         printf("Errore: memoria insufficiente per la matrice.\n");
@@ -153,8 +173,10 @@ int main(int argc, char* argv[]) {
     fclose(file);
 
     // Allocazione della matrice inversa
+    // Alloco spazio per un vettore di n puntatori.
     double** inverse = (double**)malloc(n * sizeof(double*));
     for (int i = 0; i < n; i++) {
+        //Ogni cella del vettore contiene un puntatore che punta ad una riga della matrice
         inverse[i] = (double*)malloc(n * sizeof(double));
     }
 
