@@ -21,6 +21,7 @@ struct vector {
         double *vect;
 };
 
+void readMatrix(FILE *f, struct squareMatrix *matrix);
 void initializeArray(struct vector *v);
 void printArray(struct vector *v);
 void initializeMatrix(double *mat, int nrows, int ncols);
@@ -30,6 +31,17 @@ void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector
 void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x);
 void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse);
 
+
+void readMatrix(FILE *f, struct squareMatrix *matrix){
+        char buf[10]; 
+        fgets(buf, sizeof(buf), f);
+        sscanf(buf, "%i", &matrix->n);
+        matrix->mat = (double *)malloc(matrix->n * sizeof(double));
+        for(int i = 0; i < (matrix->n * matrix->n); i++){     
+                fgets(buf, sizeof(buf),f);
+                matrix->mat[i]=atof(buf);
+        }
+}
 
 void initializeArray(struct vector *v)
 {
@@ -117,6 +129,9 @@ void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vecto
 }
 
 void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse){
+        inverse->n = A->n;
+        inverse->mat = (double *)malloc(inverse->n * inverse->n * sizeof(double));
+
         //A=LU find L, U
         struct squareMatrix L, U;
         L.n = A->n;
@@ -151,13 +166,14 @@ void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse){
                         }
                 }
         }
+        /*
         //output: L, U   
         printf("Matrix L:\n");
         printMatrix(L.mat, L.n, L.n);
         printf("Matrix U:\n");
-        printMatrix(U.mat, U.n, U.n);     
+        printMatrix(U.mat, U.n, U.n); 
+        */    
 
-        //Ly=e1 find y with forward sub method
         struct vector y; 
         y.length = A->n;
         y.vect = (double *)malloc(y.length * sizeof(double));
@@ -192,6 +208,8 @@ void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse){
 
 int main(int argc, char* argv[])
 {
+        clock_t timer; 
+
         struct matrix matrix1, matrix2;
 
         srand(time(NULL));
@@ -212,23 +230,27 @@ int main(int argc, char* argv[])
 
         //matrix multiplication result M x P
         struct matrix matrix3;
+        timer = clock();
         matrixMul(&matrix1, &matrix2, &matrix3);
+        timer = clock() - timer; 
         puts("matrix3:");
         printMatrix(matrix3.mat, matrix3.nrows, matrix3.ncols);
+        printf("Time to compute matrix multiplication: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
 
-        //inverse of a square matrix matrix4
+        //inverse of a square matrix matrix4 read from file matrix4.txt
         struct squareMatrix matrix4, inverse;
-        matrix4.n = S;
-        matrix4.mat = (double *)malloc(matrix4.n * matrix4.n * sizeof(double));
-        initializeMatrix(matrix4.mat, matrix4.n, matrix4.n);
+        FILE *f; 
+        f = fopen("matrix4.txt", "r");
+        readMatrix(f, &matrix4);
         puts("matrix4:");
         printMatrix(matrix4.mat, matrix4.n, matrix4.n);
-        
-        inverse.n = matrix4.n;
-        inverse.mat = (double *)malloc(matrix4.n * matrix4.n * sizeof(double));
+        timer = clock();
         matrixInverse(&matrix4, &inverse);
+        timer = clock() - timer; 
         puts("inverse:");
         printMatrix(inverse.mat, inverse.n, inverse.n);
+        printf("Time to compute the inverse: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
+
         
         free(matrix1.mat);
         free(matrix2.mat);
