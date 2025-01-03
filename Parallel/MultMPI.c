@@ -5,27 +5,18 @@
 #include <math.h>
 
 #define M 1000
-#define N 70
-#define T 30
+#define N 7000
+#define T 1000
 
 struct matrix {
         int nrows;
         int ncols;
         double *mat;
 };
-struct squareMatrix {
-        int n;
-        double *mat;
-};
-struct vector {
-        int length; 
-        double *vect;
-};
 
-void initializeArray(struct vector *v);
-void printArray(struct vector *v);
-void initializeMatrix(double *mat, int nrows, int ncols);
 void printMatrixFile(FILE *f, struct matrix *matrix);
+void printMatrix(double *mat, int nrows, int ncols);
+void initializeMatrix(double *mat, int nrows, int ncols);
 void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3);
 
 void printMatrixFile(FILE *f, struct matrix *matrix){
@@ -37,28 +28,6 @@ void printMatrixFile(FILE *f, struct matrix *matrix){
         }
 }
 
-void initializeArray(struct vector *v)
-{
-        for (int i = 0; i < v->length; ++i)
-                v->vect[i] = rand()%10;
-}
-
-void initializeMatrix(double *mat, int nrows, int ncols)
-{
-        for (int i = 0; i < nrows; i++){
-                for(int j = 0; j < ncols; j++){
-                        mat[ncols*i+j] = rand()%10;  //between 0 and 9
-                } 
-        }
-}
-
-void printArray(struct vector *v)
-{
-        for (int i = 0; i < v->length; ++i){
-                printf("%0.1f\n", v->vect[i]);                
-        }
-}
-
 void printMatrix(double *mat, int nrows, int ncols)
 {
         for (int i = 0; i < nrows; i++){
@@ -66,6 +35,15 @@ void printMatrix(double *mat, int nrows, int ncols)
                         printf("%0.2f ", mat[ncols*i+j]);
                 } 
                 printf("\n");
+        }
+}
+
+void initializeMatrix(double *mat, int nrows, int ncols)
+{
+        for (int i = 0; i < nrows; i++){
+                for(int j = 0; j < ncols; j++){
+                        mat[ncols*i+j] = 9 * ((double)rand() / RAND_MAX);  //between 0 and 9
+                } 
         }
 }
 
@@ -176,6 +154,7 @@ int main(int argc, char* argv[])
         matrix3Part.nrows = matrix1Part.nrows;
         matrix3Part.mat = (double *)malloc(matrix3Part.nrows * matrix3Part.ncols * sizeof(double));
    
+        timer = clock();
         //send a number of rows of matrix1 to each process
         MPI_Scatterv(matrix1.mat, sendcounts, displs, MPI_DOUBLE, 
                 matrix1Part.mat, matrix1Part.nrows * matrix1Part.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -183,18 +162,12 @@ int main(int argc, char* argv[])
         //broadcast matrix2 to all processes
         MPI_Bcast(matrix2.mat, matrix2.nrows * matrix2.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        timer = clock();
         //multiplication 
         matrixMul(&matrix1Part, &matrix2, &matrix3Part);
-        timer = clock() - timer;
         
         if (my_rank == 0) {
-                int remaining = matrix1.nrows % size;
                 for (int i = 0; i < size; i++) {
-                        sendcounts[i] = (matrix1.nrows / size) * matrix3.ncols;
-                        if (i < remaining) {
-                                sendcounts[i] += matrix3.ncols;  
-                        }
+                        sendcounts[i] = sendcounts[i] / matrix1.ncols * matrix3.ncols;
                 }
 
                 displs[0] = 0;
@@ -205,6 +178,8 @@ int main(int argc, char* argv[])
         
         MPI_Gatherv(matrix3Part.mat, matrix3Part.nrows * matrix3Part.ncols, MPI_DOUBLE, 
                 matrix3.mat, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        
+        timer = clock() - timer;
         
         if (my_rank == 0){
                 f = fopen("matrix3.txt", "w");
