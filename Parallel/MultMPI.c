@@ -8,6 +8,8 @@
 #define N 7000
 #define T 1000
 
+#define MAX 15
+
 struct matrix {
         int nrows;
         int ncols;
@@ -42,7 +44,7 @@ void initializeMatrix(double *mat, int nrows, int ncols)
 {
         for (int i = 0; i < nrows; i++){
                 for(int j = 0; j < ncols; j++){
-                        mat[ncols*i+j] = 9 * ((double)rand() / RAND_MAX);  //between 0 and 9
+                        mat[ncols*i+j] = MAX * ((double)rand() / RAND_MAX);  //between 0 and MAX
                 } 
         }
 }
