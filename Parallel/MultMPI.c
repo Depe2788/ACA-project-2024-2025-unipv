@@ -4,8 +4,8 @@
 #include <time.h>
 #include <math.h>
 
-#define M 1000
-#define N 7000
+#define M 100
+#define N 700
 #define T 1000
 
 #define MAX 15
@@ -69,7 +69,9 @@ void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *ma
 
 int main(int argc, char* argv[])
 {
-        clock_t timer;
+        double mul_timer, tot_timer;
+        double mul_timer_max, tot_timer_max;
+
         FILE *f;
 
         MPI_Init(&argc, &argv);
@@ -156,7 +158,7 @@ int main(int argc, char* argv[])
         matrix3Part.nrows = matrix1Part.nrows;
         matrix3Part.mat = (double *)malloc(matrix3Part.nrows * matrix3Part.ncols * sizeof(double));
    
-        timer = clock();
+        tot_timer = MPI_Wtime();
         //send a number of rows of matrix1 to each process
         MPI_Scatterv(matrix1.mat, sendcounts, displs, MPI_DOUBLE, 
                 matrix1Part.mat, matrix1Part.nrows * matrix1Part.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -164,8 +166,9 @@ int main(int argc, char* argv[])
         //broadcast matrix2 to all processes
         MPI_Bcast(matrix2.mat, matrix2.nrows * matrix2.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        //multiplication 
+        mul_timer = MPI_Wtime();
         matrixMul(&matrix1Part, &matrix2, &matrix3Part);
+        mul_timer = MPI_Wtime() - mul_timer;
         
         if (my_rank == 0) {
                 for (int i = 0; i < size; i++) {
@@ -181,13 +184,20 @@ int main(int argc, char* argv[])
         MPI_Gatherv(matrix3Part.mat, matrix3Part.nrows * matrix3Part.ncols, MPI_DOUBLE, 
                 matrix3.mat, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
-        timer = clock() - timer;
-        
+        tot_timer = MPI_Wtime() - tot_timer;
+
+        //printf("Process %d Time to compute matrix multiplication: %0.6f seconds\n", my_rank, mul_timer);
+        //printf("Process %d Time to compute matrix multiplication and to transfer data: %0.6f seconds\n", my_rank, tot_timer);
+
+        MPI_Reduce(&mul_timer, &mul_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&tot_timer, &tot_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
         if (my_rank == 0){
+                printf("Max process Time to compute matrix multiplication: %0.6f seconds\n", mul_timer_max);
+                printf("Max process Time to compute matrix multiplication and to transfer data: %0.6f seconds\n", tot_timer_max);
                 f = fopen("matrix3.txt", "w");
                 printMatrixFile(f, &matrix3);
                 fclose(f);
-                printf("Time to compute matrix multiplication: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
                 free(matrix1.mat);
                 free(matrix3.mat);
                 free(displs);
