@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     struct squareMatrix matrix4, inverse;
     FILE *f; 
         
-    f = fopen("matrix4.txt", "r");
+    f = fopen("../Input/matrix4.txt", "r");
     readMatrixFile(f, &matrix4.mat, &matrix4.n, &matrix4.n);
     fclose(f);
 
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     matrixInversePivoting(&matrix4, &inverse);
     timer = clock() - timer; 
 
-    f = fopen("inverse.txt", "w");
+    f = fopen("../Output/inverse.txt", "w");
     printMatrixFile(f, inverse.mat, inverse.n, inverse.n);
     fclose(f);
     printf("Time to compute the inverse: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
