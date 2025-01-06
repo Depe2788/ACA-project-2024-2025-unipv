@@ -103,10 +103,6 @@ int main(int argc, char* argv[])
                 mul_timer = MPI_Wtime();
         }
         matrixMul(&matrix1Part, &matrix2, &matrix3Part);
-        MPI_Barrier(MPI_COMM_WORLD);
-        if(my_rank == 0){
-                mul_timer = MPI_Wtime() - mul_timer;
-        }
         
         if (my_rank == 0) {
                 for (int i = 0; i < size; i++) {
@@ -123,7 +119,9 @@ int main(int argc, char* argv[])
         MPI_Gatherv(matrix3Part.mat, matrix3Part.nrows * matrix3Part.ncols, MPI_DOUBLE, 
                 matrix3.mat, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+        MPI_Barrier(MPI_COMM_WORLD);
         if (my_rank == 0){
+                mul_timer = MPI_Wtime() - mul_timer;
                 printf("Time to compute matrix multiplication: %0.6f seconds\n", mul_timer);
                 //printf("Max process Time to compute matrix multiplication and to transfer data: %0.6f seconds\n", tot_timer_max);
                 f = fopen("../Output/matrix3.txt", "w");
