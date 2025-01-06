@@ -1,4 +1,4 @@
-#include "serialFunctions.h"
+#include "functions.h"
 
 //Inside the function there is the dynamic allocation, so the address mat changes, pass the argument by reference
 void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols){

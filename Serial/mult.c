@@ -1,4 +1,4 @@
-#include "serialFunctions.h"
+#include "functions.h"
 
 //compute the matrix multiplication
 int main(int argc, char* argv[])

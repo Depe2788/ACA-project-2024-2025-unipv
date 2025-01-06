@@ -1,4 +1,4 @@
-#include "serialFunctions.h"
+#include "functions.h"
 
 //compute the inverse of a square matrix matrix4 read from file matrix4.txt
 int main(int argc, char* argv[])
@@ -11,7 +11,6 @@ int main(int argc, char* argv[])
     f = fopen("matrix4.txt", "r");
     readMatrixFile(f, &matrix4.mat, &matrix4.n, &matrix4.n);
     fclose(f);
-    printMatrix(matrix4.mat, matrix4.n, matrix4.n);
 
     timer = clock();
     matrixInversePivoting(&matrix4, &inverse);
