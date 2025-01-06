@@ -1,0 +1,16 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/giuliatrespiolli/Desktop/University/mpi/Serial/serialFunctions'
+relocations:
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _readMatrixFile, symObjAddr: 0x0, symBinAddr: 0x100002A00, symSize: 0x134 }
+  - { offsetInCU: 0x4E, offset: 0x4E, size: 0x8, addend: 0x0, symName: _readMatrixFile, symObjAddr: 0x0, symBinAddr: 0x100002A00, symSize: 0x134 }
+  - { offsetInCU: 0xC7, offset: 0xC7, size: 0x8, addend: 0x0, symName: _initializeMatrix, symObjAddr: 0x134, symBinAddr: 0x100002B34, symSize: 0xC0 }
+  - { offsetInCU: 0x13F, offset: 0x13F, size: 0x8, addend: 0x0, symName: _printMatrix, symObjAddr: 0x1F4, symBinAddr: 0x100002BF4, symSize: 0xC8 }
+  - { offsetInCU: 0x1B7, offset: 0x1B7, size: 0x8, addend: 0x0, symName: _printMatrixFile, symObjAddr: 0x2BC, symBinAddr: 0x100002CBC, symSize: 0xF0 }
+  - { offsetInCU: 0x23D, offset: 0x23D, size: 0x8, addend: 0x0, symName: _matrixMul, symObjAddr: 0x3AC, symBinAddr: 0x100002DAC, symSize: 0x204 }
+  - { offsetInCU: 0x2D1, offset: 0x2D1, size: 0x8, addend: 0x0, symName: _forwardSubstitution, symObjAddr: 0x5B0, symBinAddr: 0x100002FB0, symSize: 0x188 }
+  - { offsetInCU: 0x349, offset: 0x349, size: 0x8, addend: 0x0, symName: _backwardSubstitution, symObjAddr: 0x738, symBinAddr: 0x100003138, symSize: 0x198 }
+  - { offsetInCU: 0x3C1, offset: 0x3C1, size: 0x8, addend: 0x0, symName: _matrixInversePivoting, symObjAddr: 0x8D0, symBinAddr: 0x1000032D0, symSize: 0x8F0 }
+  - { offsetInCU: 0x26, offset: 0x86A, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x100003BC0, symSize: 0x1DC }
+  - { offsetInCU: 0x6A, offset: 0x8AE, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x100003BC0, symSize: 0x1DC }
+...

@@ -1,69 +1,27 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <math.h>
+#include "serialFunctions.h"
 
-#define M 3
-#define N 4
-#define T 2
-#define S 3
-
-struct matrix {
-        int nrows;
-        int ncols;
-        double *mat;
-};
-struct squareMatrix {
-        int n;
-        double *mat;
-};
-struct vector {
-        int length; 
-        double *vect;
-};
-
-void readMatrix(FILE *f, struct squareMatrix *matrix);
-void initializeArray(struct vector *v);
-void printArray(struct vector *v);
-void initializeMatrix(double *mat, int nrows, int ncols);
-void printMatrix(double *mat, int nrows, int ncols);
-void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3);
-void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x);
-void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x);
-void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse);
-void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse);
-
-
-void readMatrix(FILE *f, struct squareMatrix *matrix){
-        char buf[10]; 
-        fgets(buf, sizeof(buf), f);
-        sscanf(buf, "%i", &matrix->n);
-        matrix->mat = (double *)malloc(matrix->n * sizeof(double));
-        for(int i = 0; i < (matrix->n * matrix->n); i++){     
-                fgets(buf, sizeof(buf),f);
-                matrix->mat[i]=atof(buf);
+//Inside the function there is the dynamic allocation, so the address mat changes, pass the argument by reference
+void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols){
+        if (f == NULL) {
+                perror("Invalide file pointer");
+                exit(1);
         }
-}
-
-void initializeArray(struct vector *v)
-{
-        for (int i = 0; i < v->length; ++i)
-                v->vect[i] = rand()%10;
+        char buf[100]; 
+        fgets(buf, sizeof(buf), f);
+        sscanf(buf, "%i %i", nrows, ncols);
+        *mat = (double *)malloc((*nrows) * (*ncols) * sizeof(double));
+        for(int i = 0; i < ((*nrows) * (*ncols)); i++){     
+                fgets(buf, sizeof(buf),f);
+                (*mat)[i]=atof(buf);
+        }
 }
 
 void initializeMatrix(double *mat, int nrows, int ncols)
 {
         for (int i = 0; i < nrows; i++){
                 for(int j = 0; j < ncols; j++){
-                        mat[ncols*i+j] = rand()%10;  //between 0 and 9
+                        mat[ncols*i+j] = MAX * ((double)rand() / RAND_MAX);  //between 0 and MAX
                 } 
-        }
-}
-
-void printArray(struct vector *v)
-{
-        for (int i = 0; i < v->length; ++i){
-                printf("%0.1f\n", v->vect[i]);                
         }
 }
 
@@ -74,6 +32,21 @@ void printMatrix(double *mat, int nrows, int ncols)
                         printf("%0.2f ", mat[ncols*i+j]);
                 } 
                 printf("\n");
+        }
+}
+
+void printMatrixFile(FILE *f, double *mat, int nrows, int ncols)
+{
+        if (f == NULL) {
+                perror("Invalide file pointer");
+                exit(1);
+        }
+        fprintf(f, "%i %i\n", nrows, ncols);
+        for(int i = 0; i < nrows; i++){   
+                for(int j = 0; j < ncols; j++){   
+                        fprintf(f, "%.2f ", mat[ncols * i + j]);
+                }
+                fprintf(f, "\n");
         }
 }
 
@@ -107,7 +80,7 @@ void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector
                      x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Errore: diagonal element 0 in the forward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 in the forward substitution (A singular).\n");
                         exit(1);
                 }
                 x->vect[i] /= A->mat[(A->n) * i + i];
@@ -123,87 +96,11 @@ void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vecto
                     x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Errore: diagonal element 0 in the backward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 in the backward substitution (A singular).\n");
                         exit(1);
                 }
                 x->vect[i] /= A->mat[(A->n) * i + i];
         }
-}
-
-void matrixInverse(struct squareMatrix *A, struct squareMatrix *inverse){
-        inverse->n = A->n;
-        inverse->mat = (double *)malloc(inverse->n * inverse->n * sizeof(double));
-
-        //A=LU find L, U
-        struct squareMatrix L, U;
-        L.n = A->n;
-        L.mat = (double *)malloc(L.n * L.n * sizeof(double));
-        U.n = A->n; 
-        U.mat = (double *)malloc(U.n * U.n * sizeof(double));
-
-        //initialize L: identity matrix and U = A
-        for (int i = 0; i < A->n; i++){
-                for(int j = 0; j < A->n; j++){  
-                        if(i == j){
-                                L.mat[(L.n) * i + j] = 1;
-                        } else {
-                                L.mat[(L.n) * i + j] = 0;
-                        } 
-                        U.mat[(U.n) * i + j] = A->mat[(A->n) * i + j];
-                }
-        }
-
-        for (int k = 0; k < (A->n) - 1; k++){
-                // If the pivot is equal to zero LU factorization can't go on 
-                if (U.mat[U.n * k + k] == 0) {
-                        printf("Pivot equal to zero, LU factorization can't go on.\n");
-                        free(L.mat);
-                        free(U.mat);
-                        return;  
-                }
-                for (int i = k+1; i < A->n; i++){
-                        L.mat[L.n * i + k] = U.mat[U.n * i + k] / U.mat[U.n * k + k];
-                        for (int s = k; s < A->n; s++){
-                                U.mat[U.n * i + s] -= L.mat[L.n * i + k] * U.mat[U.n * k + s];
-                        }
-                }
-        }
-        /*
-        //output: L, U   
-        printf("Matrix L:\n");
-        printMatrix(L.mat, L.n, L.n);
-        printf("Matrix U:\n");
-        printMatrix(U.mat, U.n, U.n); 
-        */    
-
-        struct vector y; 
-        y.length = A->n;
-        y.vect = (double *)malloc(y.length * sizeof(double));
-        struct vector e;
-        e.length = A->n;
-        e.vect = (double *)malloc(e.length * sizeof(double));
-        struct vector c;
-        c.length = A->n;
-        c.vect = (double *)malloc(c.length * sizeof(double));
-
-        for (int i = 0; i < A->n; i++){
-                for(int k = 0; k < e.length; k++){
-                        e.vect[k]=0;
-                }
-                e.vect[i] = 1;
-                forwardSubstitution(&L, &e, &y);
-                backwardSubstitution(&U, &y, &c);
-                //copy c in inverse
-                for(int k = 0; k < A->n; k++){
-                        inverse->mat[(A->n) * k + i] = c.vect[k];
-                }
-        }
-
-        free(L.mat);
-        free(U.mat);
-        free(y.vect);
-        free(e.vect);
-        free(c.vect);
 }
 
 //compute the inverse with LU pivoting
@@ -246,7 +143,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
                         }
                 }
 
-                // Controllo pivot nullo
+                //check if the pivot is equal to 0
                 if (fabs(tmp) < 1e-10) {
                         printf("Error: Pivot 0 or too small.\n");
                         exit(EXIT_FAILURE);
@@ -279,16 +176,17 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
                                 U.mat[U.n * i + s] = U.mat[U.n * i + s] - L.mat[L.n * i + k] * U.mat[U.n * k + s];
                         }
                 }
-        }
+        }  
         
         //output: L, U, P
+        /*
         printf("Matrix L:\n");
         printMatrix(L.mat, L.n, L.n);
         printf("Matrix U:\n");
         printMatrix(U.mat, U.n, U.n); 
         printf("Matrix P:\n");
         printMatrix(P.mat, P.n, P.n); 
-
+        */
         
         struct vector y; 
         y.length = A->n;
@@ -306,13 +204,12 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
                 }
                 forwardSubstitution(&L, &pe, &y);
                 backwardSubstitution(&U, &y, &c);
-                //copy c in inverse
+                //copy c in the inverse
                 for(int k = 0; k < A->n; k++){
                         inverse->mat[(A->n) * k + i] = c.vect[k];
                 }
         }
   
-
         free(L.mat);
         free(U.mat);
         free(P.mat);
@@ -320,66 +217,3 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
         free(pe.vect);
         free(c.vect);
 }
-
-int main(int argc, char* argv[])
-{
-        clock_t timer; 
-
-        struct matrix matrix1, matrix2;
-
-        srand(time(NULL));
-        //matrix1 initialization M x N
-        matrix1.nrows = M; 
-        matrix1.ncols = N;
-        matrix1.mat = (double *)malloc(matrix1.nrows * matrix1.ncols * sizeof(double));
-        initializeMatrix(matrix1.mat, matrix1.nrows, matrix1.ncols);
-        puts("matrix1:");
-        printMatrix(matrix1.mat, matrix1.nrows, matrix1.ncols);
-        //matrix2 initialization N x P
-        matrix2.nrows = N; 
-        matrix2.ncols = T;
-        matrix2.mat = (double *)malloc(matrix2.nrows * matrix2.ncols * sizeof(double));
-        initializeMatrix(matrix2.mat, matrix2.nrows, matrix2.ncols);
-        puts("matrix2:");
-        printMatrix(matrix2.mat, matrix2.nrows, matrix2.ncols);
-
-        //matrix multiplication result M x P
-        struct matrix matrix3;
-        timer = clock();
-        matrixMul(&matrix1, &matrix2, &matrix3);
-        timer = clock() - timer; 
-        puts("matrix3:");
-        printMatrix(matrix3.mat, matrix3.nrows, matrix3.ncols);
-        printf("Time to compute matrix multiplication: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
-
-        //inverse of a square matrix matrix4 read from file matrix4.txt
-        struct squareMatrix matrix4, inverse;
-        FILE *f; 
-        f = fopen("matrix4.txt", "r");
-        readMatrix(f, &matrix4);
-        puts("matrix4:");
-        printMatrix(matrix4.mat, matrix4.n, matrix4.n);
-        timer = clock();
-        matrixInversePivoting(&matrix4, &inverse);
-        timer = clock() - timer; 
-        puts("inverse:");
-        printMatrix(inverse.mat, inverse.n, inverse.n);
-        printf("Time to compute the inverse: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
-
-        
-        free(matrix1.mat);
-        free(matrix2.mat);
-        free(matrix3.mat);
-        free(matrix4.mat);
-        free(inverse.mat);
-
-        return 0; 
-}
-
-
-
-
-
-        
-
-
