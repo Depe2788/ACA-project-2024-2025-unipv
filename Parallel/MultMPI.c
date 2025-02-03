@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-        double mul_timer;
+        double mul_timer, tot_timer;
 
         FILE *f;
 
@@ -32,6 +32,15 @@ int main(int argc, char* argv[])
 
         struct matrix matrix3Part;
         matrix3Part.ncols = matrix2.ncols;
+
+        int *sendcounts;
+        int *displs;
+
+        //terminate useless processes
+        if(my_rank >= matrix1.nrows){
+                MPI_Finalize();
+                exit(0);
+        }
         
         if (my_rank == 0){
 
@@ -52,18 +61,24 @@ int main(int argc, char* argv[])
                 
                 //allocation of matrix3 (result of the mult) 
                 matrix3.mat = (double *)malloc(matrix3.nrows * matrix3.ncols * sizeof(double));
-        }
-        
-        int *sendcounts;
-        int *displs;
 
-        if (my_rank == 0) {
+                if(size > matrix1.nrows){
+                        size = matrix1.nrows;
+                }
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        if(my_rank == 0){
+                tot_timer = MPI_Wtime();
+
+                //sendcounts is the vector containing the number of elements of matrix1Part of each process
                 sendcounts = (int *)malloc(size * sizeof(int));
                 displs = (int *)malloc(size * sizeof(int));
 
                 int remaining = matrix1.nrows % size;
+                int div = matrix1.nrows / size;
                 for (int i = 0; i < size; i++) {
-                        sendcounts[i] = (matrix1.nrows / size) * matrix1.ncols;
+                        sendcounts[i] = div * matrix1.ncols;
                         if (i < remaining) {
                                 sendcounts[i] += matrix1.ncols;  
                         }
@@ -74,23 +89,16 @@ int main(int argc, char* argv[])
                         displs[i] = displs[i - 1] + sendcounts[i - 1];
                 }
         }
-        
-        //sendcounts is the vector containing the number of elements of matrix1Part o feach process
+
         //MPI_Scatter ensures that data is sent from 0 only once ready, other processes are so implicitly blocked   
         MPI_Scatter(sendcounts, 1, MPI_INT, &matrix1Part.nrows, 1, MPI_INT, 0, MPI_COMM_WORLD);
         matrix1Part.nrows /= matrix1Part.ncols; 
         //printf("process %d, matrix1Part.nrows = %d\n", my_rank, matrix1Part.nrows);
-        
-        if (matrix1Part.nrows == 0){
-                printf("More process than rows");
-                MPI_Abort(MPI_COMM_WORLD, 1);
-        }
 
         matrix1Part.mat = (double *)malloc(matrix1Part.nrows * matrix1Part.ncols * sizeof(double));
         matrix3Part.nrows = matrix1Part.nrows;
         matrix3Part.mat = (double *)malloc(matrix3Part.nrows * matrix3Part.ncols * sizeof(double));
    
-        //tot_timer = MPI_Wtime();
         //send a variable number of rows of matrix1 to each process
         MPI_Scatterv(matrix1.mat, sendcounts, displs, MPI_DOUBLE, 
                 matrix1Part.mat, matrix1Part.nrows * matrix1Part.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -98,10 +106,6 @@ int main(int argc, char* argv[])
         //broadcast matrix2 to all processes
         MPI_Bcast(matrix2.mat, matrix2.nrows * matrix2.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        MPI_Barrier(MPI_COMM_WORLD);
-        if(my_rank == 0){
-                mul_timer = MPI_Wtime();
-        }
         matrixMul(&matrix1Part, &matrix2, &matrix3Part);
         
         if (my_rank == 0) {
@@ -116,14 +120,14 @@ int main(int argc, char* argv[])
         }
         
         //MPI_Barrier(MPI_COMM_WORLD); not necessary
+        //only when all processes call MPI_Gatherv data are united, so function blocking 
         MPI_Gatherv(matrix3Part.mat, matrix3Part.nrows * matrix3Part.ncols, MPI_DOUBLE, 
                 matrix3.mat, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         MPI_Barrier(MPI_COMM_WORLD);
         if (my_rank == 0){
-                mul_timer = MPI_Wtime() - mul_timer;
-                printf("Time to compute matrix multiplication: %0.6f seconds\n", mul_timer);
-                //printf("Max process Time to compute matrix multiplication and to transfer data: %0.6f seconds\n", tot_timer_max);
+                tot_timer = MPI_Wtime() - tot_timer;
+                printf("Time to compute matrix multiplication and to transfer data: %0.6f seconds\n", tot_timer);
                 f = fopen("../Output/matrix3.txt", "w");
                 printMatrixFile(f, matrix3.mat, matrix3.nrows, matrix3.ncols);
                 fclose(f);

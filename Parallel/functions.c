@@ -65,6 +65,20 @@ void printMatrixFile(FILE *f, double *mat, int nrows, int ncols)
         }
 }
 
+void printSquareMatrixFile(FILE *f, struct squareMatrix *matrix)
+{
+        if (f == NULL) {
+                perror("Invalide file pointer");
+                exit(1);
+        }
+        fprintf(f, "%i\n", matrix->n);
+        for(int i = 0; i < matrix->n; i++){   
+                for(int j = 0; j < matrix->n; j++){   
+                        fprintf(f, "%.6f\n", matrix->mat[matrix->n * i + j]);
+                }
+        }
+}
+
 void printMatrixTranspose(FILE *f, struct squareMatrix *matrix)
 {
         if (f == NULL) {
@@ -110,43 +124,37 @@ void transposeInPlace(struct squareMatrix *matrix) {
 
 //linear systems Ax = b; A must be a square matrix non singular
 //forward substitution method for lower triangular systems 
-void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x){
+//solution x will be in b
+void forwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = 0; i < A->n; i++){
-                x->vect[i] = b->vect[i];
                 for (int j = 0; j < i; j++){
-                     x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
+                     b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Errore: diagonal element 0 in the forward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 in the forward substitution (A singular).\n");
                         exit(1);
                 }
-                x->vect[i] /= A->mat[(A->n) * i + i];
+                b->vect[i] /= A->mat[(A->n) * i + i];
         }
 }
 
 //linear systems Ax = b; A must be a square matrix non singular
 //backward substitution method for upper triangular systems 
-void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x){
+void backwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = (A->n) - 1; i >= 0; i--){
-                x->vect[i] = b->vect[i];
                 for (int j = i+1; j < A->n; j++){
-                    x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
+                    b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Errore: diagonal element 0 in the backward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 in the backward substitution (A singular).\n");
                         exit(1);
                 }
-                x->vect[i] /= A->mat[(A->n) * i + i];
+                b->vect[i] /= A->mat[(A->n) * i + i];
         }
 }
 
 //compute the inverse with LU pivoting
-void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size) {
-
-        if(A->n < size){
-                printf("More process than rows");
-                MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer) {
         
         struct matrix inversePart;
         int offset;
@@ -161,8 +169,9 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                 displs = (int *)malloc(size * sizeof(int));
 
                 int remaining = A->n % size;
+                int div = A->n / size;
                 for (int i = 0; i < size; i++) {
-                        recvcounts[i] = (A->n / size) * A->n;
+                        recvcounts[i] = div * A->n;
                         if (i < remaining) {
                                 recvcounts[i] += A->n;  
                         }
@@ -191,15 +200,9 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
         U.mat = (double *)malloc(U.n * U.n * sizeof(double));
         P.mat = (double *)malloc(P.n * P.n * sizeof(double));
 
-        struct vector y; 
-        y.length = A->n;
-        y.vect = (double *)malloc(y.length * sizeof(double));
         struct vector pe;
         pe.length = A->n;
         pe.vect = (double *)malloc(pe.length * sizeof(double));
-        struct vector c;
-        c.length = A->n;
-        c.vect = (double *)malloc(c.length * sizeof(double));
     
         if(my_rank == 0){
                 //initialize L and P (identity matrices) and U = A
@@ -219,17 +222,17 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                 double tmp;
                 int maxIndex; 
                 for (int k = 0; k < (A->n) - 1; k++){
-                        tmp = U.mat[(U.n)*k+k];
+                        tmp = fabs(U.mat[(U.n) * k + k]);
                         maxIndex = k;
-                        for(int j = k; j < (A->n); j++){
-                                if(fabs(U.mat[(U.n) * j + k]) > fabs(tmp)){
-                                        tmp = U.mat[(U.n)*j+k];
+                        for(int j = k + 1; j < (A->n); j++){
+                                if(fabs(U.mat[(U.n) * j + k]) > tmp){
+                                        tmp = fabs(U.mat[(U.n)*j+k]);
                                         maxIndex = j; 
                                 }
                         }
 
                         // Controllo pivot nullo
-                        if (fabs(tmp) < 1e-10) {
+                        if (tmp < 1e-10) {
                                 printf("Error: Pivot 0 or too small.\n");
                                 exit(EXIT_FAILURE);
                         }
@@ -263,7 +266,8 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                         }
                 }
         }
-
+        //MPI_Barrier(MPI_COMM_WORLD);
+        //*timer = MPI_Wtime() - *timer;
         //forward L, U and P to other processes
         MPI_Bcast(L.mat, L.n * L.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(U.mat, U.n * U.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -273,22 +277,26 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                 for(int k = 0; k < pe.length; k++){
                         pe.vect[k] = P.mat[P.n * k + i + offset];
                 }
-                forwardSubstitution(&L, &pe, &y);
-                backwardSubstitution(&U, &y, &c);
-                //copy c in the inversePart
+                forwardSubstitution(&L, &pe);
+                backwardSubstitution(&U, &pe);
+                //copy pe (ci) in the inversePart
                 for(int k = 0; k < inversePart.ncols; k++){
-                        inversePart.mat[inversePart.ncols * i + k] = c.vect[k];         
+                        inversePart.mat[inversePart.ncols * i + k] = pe.vect[k];         
                 }
         }
 
         MPI_Gatherv(inversePart.mat, inversePart.nrows * inversePart.ncols, MPI_DOUBLE, inverse->mat, 
             recvcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+        if(my_rank == 0){
+                transposeInPlace(inverse);
+                free(recvcounts);
+                free(displs);
+        }
+
         free(L.mat);
         free(U.mat);
         free(P.mat);
-        free(y.vect);
         free(pe.vect);
-        free(c.vect);
         free(inversePart.mat);
 }
