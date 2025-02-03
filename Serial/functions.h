@@ -3,10 +3,10 @@
 #include <time.h>
 #include <math.h>
 
-#define M 3
-#define N 4
-#define T 2
-#define MAX 9
+#define M 1000
+#define N 1000
+#define T 1000
+#define MAX 15
 
 #define FILE_ERROR 1
 
@@ -25,15 +25,16 @@ struct vector {
 };
 
 //general
-void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols);
-void initializeMatrix(double *mat, int nrows, int ncols);
 void printMatrix(double *mat, int nrows, int ncols);
+void initializeMatrix(double *mat, int nrows, int ncols);
 void printMatrixFile(FILE *f, double *mat, int nrows, int ncols);
+void printSquareMatrixtFile(FILE *f, struct squareMatrix matrix);
+void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
 
 //multiplication
 void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3);
 
 //inverse
-void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x);
-void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x);
+void forwardSubstitution(struct squareMatrix *A, struct vector *b);
+void backwardSubstitution(struct squareMatrix *A, struct vector *b);
 void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse);

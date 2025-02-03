@@ -1,18 +1,18 @@
 #include "functions.h"
 
 //Inside the function there is the dynamic allocation, so the address mat changes, pass the argument by reference
-void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols){
+void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix){
         if (f == NULL) {
                 perror("Invalide file pointer");
                 exit(1);
         }
         char buf[100]; 
         fgets(buf, sizeof(buf), f);
-        sscanf(buf, "%i %i", nrows, ncols);
-        *mat = (double *)malloc((*nrows) * (*ncols) * sizeof(double));
-        for(int i = 0; i < ((*nrows) * (*ncols)); i++){     
+        sscanf(buf, "%i", &matrix->n);
+        matrix->mat = (double *)malloc((matrix->n) * (matrix->n) * sizeof(double));
+        for(int i = 0; i < ((matrix->n) * (matrix->n)); i++){     
                 fgets(buf, sizeof(buf),f);
-                (*mat)[i]=atof(buf);
+                matrix->mat[i]=atof(buf);
         }
 }
 
@@ -50,6 +50,20 @@ void printMatrixFile(FILE *f, double *mat, int nrows, int ncols)
         }
 }
 
+void printSquareMatrixtFile(FILE *f, struct squareMatrix matrix)
+{
+        if (f == NULL) {
+                perror("Invalide file pointer");
+                exit(1);
+        }
+        fprintf(f, "%i\n", matrix.n);
+        for(int i = 0; i < matrix.n; i++){   
+                for(int j = 0; j < matrix.n; j++){   
+                        fprintf(f, "%.6f\n", matrix.mat[matrix.n * i + j]);
+                }
+        }
+}
+
 void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3){
         if (matrix1->ncols != matrix2->nrows) {
                 printf("The matrix multiplication can't be done\n");
@@ -61,11 +75,11 @@ void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *ma
         matrix3->ncols = matrix2->ncols;
         matrix3->mat = (double *)malloc(matrix3->nrows * matrix3->ncols * sizeof(double));
 
-        for (int i = 0; i < matrix1->nrows; i++){
-                for (int j = 0; j < matrix2->ncols; j++){
-                        matrix3->mat[matrix2->ncols*i+j] = 0;
+        for (int i = 0; i < matrix3->nrows; i++){
+                for (int j = 0; j < matrix3->ncols; j++){
+                        matrix3->mat[matrix3->ncols*i+j] = 0;
                         for (int k = 0; k < matrix1->ncols; k++){
-                                matrix3->mat[matrix2->ncols*i+j] += matrix1->mat[matrix1->ncols*i+k] * matrix2->mat[matrix2->ncols*k+j];
+                                matrix3->mat[matrix3->ncols*i+j] += matrix1->mat[matrix1->ncols*i+k] * matrix2->mat[matrix2->ncols*k+j];
                         }
                 }
         }
@@ -73,33 +87,32 @@ void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *ma
 
 //linear systems Ax = b; A must be a square matrix non singular
 //forward substitution method for lower triangular systems 
-void forwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x){
+//solution x will be in b
+void forwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = 0; i < A->n; i++){
-                x->vect[i] = b->vect[i];
                 for (int j = 0; j < i; j++){
-                     x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
+                     b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
                         printf("Error: diagonal element 0 in the forward substitution (A singular).\n");
                         exit(1);
                 }
-                x->vect[i] /= A->mat[(A->n) * i + i];
+                b->vect[i] /= A->mat[(A->n) * i + i];
         }
 }
 
 //linear systems Ax = b; A must be a square matrix non singular
 //backward substitution method for upper triangular systems 
-void backwardSubstitution(struct squareMatrix *A, struct vector *b, struct vector *x){
+void backwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = (A->n) - 1; i >= 0; i--){
-                x->vect[i] = b->vect[i];
                 for (int j = i+1; j < A->n; j++){
-                    x->vect[i] -= A->mat[(A->n) * i + j] * x->vect[j];
+                    b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
                         printf("Error: diagonal element 0 in the backward substitution (A singular).\n");
                         exit(1);
                 }
-                x->vect[i] /= A->mat[(A->n) * i + i];
+                b->vect[i] /= A->mat[(A->n) * i + i];
         }
 }
 
@@ -136,7 +149,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
         for (int k = 0; k < (A->n) - 1; k++){
                 tmp = U.mat[(U.n)*k+k];
                 maxIndex = k;
-                for(int j = k; j < (A->n); j++){
+                for(int j = k + 1; j < (A->n); j++){
                         if(fabs(U.mat[(U.n) * j + k]) > fabs(tmp)){
                                 tmp = U.mat[(U.n)*j+k];
                                 maxIndex = j; 
@@ -166,8 +179,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
                                 tmp = L.mat[(L.n) * k + s];
                                 L.mat[(L.n) * k + s] = L.mat[(L.n) * maxIndex + s];
                                 L.mat[(L.n) * maxIndex + s] = tmp;
-                        }
-                        
+                        }      
                 }
 
                 for (int i = k+1; i < A->n; i++){
@@ -188,32 +200,24 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
         printMatrix(P.mat, P.n, P.n); 
         */
         
-        struct vector y; 
-        y.length = A->n;
-        y.vect = (double *)malloc(y.length * sizeof(double));
         struct vector pe;
         pe.length = A->n;
         pe.vect = (double *)malloc(pe.length * sizeof(double));
-        struct vector c;
-        c.length = A->n;
-        c.vect = (double *)malloc(c.length * sizeof(double));
 
         for (int i = 0; i < A->n; i++){
                 for(int k = 0; k < pe.length; k++){
                         pe.vect[k] = P.mat[P.n * k + i];
                 }
-                forwardSubstitution(&L, &pe, &y);
-                backwardSubstitution(&U, &y, &c);
+                forwardSubstitution(&L, &pe);
+                backwardSubstitution(&U, &pe);
                 //copy c in the inverse
                 for(int k = 0; k < A->n; k++){
-                        inverse->mat[(A->n) * k + i] = c.vect[k];
+                        inverse->mat[(A->n) * k + i] = pe.vect[k];
                 }
         }
   
         free(L.mat);
         free(U.mat);
         free(P.mat);
-        free(y.vect);
         free(pe.vect);
-        free(c.vect);
 }

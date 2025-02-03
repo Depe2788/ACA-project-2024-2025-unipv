@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 {
         clock_t timer; 
 
-        struct matrix matrix1, matrix2;
+        struct matrix matrix1, matrix2, matrix3;
         FILE *f;
 
         srand(time(NULL));
@@ -27,7 +27,6 @@ int main(int argc, char* argv[])
         fclose(f);
 
         //matrix multiplication result M x P
-        struct matrix matrix3;
         timer = clock();
         matrixMul(&matrix1, &matrix2, &matrix3);
         timer = clock() - timer; 

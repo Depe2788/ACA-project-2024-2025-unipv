@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     FILE *f; 
         
     f = fopen("../Input/matrix4.txt", "r");
-    readMatrixFile(f, &matrix4.mat, &matrix4.n, &matrix4.n);
+    readSquareMatrixFile(f, &matrix4);
     fclose(f);
 
     timer = clock();

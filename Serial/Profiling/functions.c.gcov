@@ -1,0 +1,227 @@
+        -:    0:Source:functions.c
+        -:    0:Graph:mult-functions.gcno
+        -:    0:Data:mult-functions.gcda
+        -:    0:Runs:3
+        -:    1:#include "functions.h"
+        -:    2:
+        -:    3://Inside the function there is the dynamic allocation, so the address mat changes, pass the argument by reference
+    #####:    4:void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix){
+    #####:    5:        if (f == NULL) {
+    #####:    6:                perror("Invalide file pointer");
+    #####:    7:                exit(1);
+        -:    8:        }
+        -:    9:        char buf[100]; 
+    #####:   10:        fgets(buf, sizeof(buf), f);
+    #####:   11:        sscanf(buf, "%i", &matrix->n);
+    #####:   12:        matrix->mat = (double *)malloc((matrix->n) * (matrix->n) * sizeof(double));
+    #####:   13:        for(int i = 0; i < ((matrix->n) * (matrix->n)); i++){     
+    #####:   14:                fgets(buf, sizeof(buf),f);
+    #####:   15:                matrix->mat[i]=atof(buf);
+        -:   16:        }
+    #####:   17:}
+        -:   18:
+        6:   19:void initializeMatrix(double *mat, int nrows, int ncols)
+        -:   20:{
+       30:   21:        for (int i = 0; i < nrows; i++){
+       87:   22:                for(int j = 0; j < ncols; j++){
+       63:   23:                        mat[ncols*i+j] = MAX * ((double)rand() / RAND_MAX);  //between 0 and MAX
+        -:   24:                } 
+        -:   25:        }
+        6:   26:}
+        -:   27:
+    #####:   28:void printMatrix(double *mat, int nrows, int ncols)
+        -:   29:{
+    #####:   30:        for (int i = 0; i < nrows; i++){
+    #####:   31:                for(int j = 0; j < ncols; j++){
+    #####:   32:                        printf("%0.2f ", mat[ncols*i+j]);
+        -:   33:                } 
+    #####:   34:                printf("\n");
+        -:   35:        }
+    #####:   36:}
+        -:   37:
+        9:   38:void printMatrixFile(FILE *f, double *mat, int nrows, int ncols)
+        -:   39:{
+        9:   40:        if (f == NULL) {
+    #####:   41:                perror("Invalide file pointer");
+    #####:   42:                exit(1);
+        -:   43:        }
+        9:   44:        fprintf(f, "%i %i\n", nrows, ncols);
+       48:   45:        for(int i = 0; i < nrows; i++){   
+      132:   46:                for(int j = 0; j < ncols; j++){   
+       93:   47:                        fprintf(f, "%.2f ", mat[ncols * i + j]);
+        -:   48:                }
+       39:   49:                fprintf(f, "\n");
+        -:   50:        }
+        9:   51:}
+        -:   52:
+    #####:   53:void printSquareMatrixtFile(FILE *f, struct squareMatrix matrix)
+        -:   54:{
+    #####:   55:        if (f == NULL) {
+    #####:   56:                perror("Invalide file pointer");
+    #####:   57:                exit(1);
+        -:   58:        }
+    #####:   59:        fprintf(f, "%i\n", matrix.n);
+    #####:   60:        for(int i = 0; i < matrix.n; i++){   
+    #####:   61:                for(int j = 0; j < matrix.n; j++){   
+    #####:   62:                        fprintf(f, "%.6f\n", matrix.mat[matrix.n * i + j]);
+        -:   63:                }
+        -:   64:        }
+    #####:   65:}
+        -:   66:
+        3:   67:void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3){
+        3:   68:        if (matrix1->ncols != matrix2->nrows) {
+    #####:   69:                printf("The matrix multiplication can't be done\n");
+    #####:   70:                free(matrix1->mat);
+    #####:   71:                free(matrix2->mat);
+    #####:   72:                exit(1);
+        -:   73:        }
+        3:   74:        matrix3->nrows = matrix1->nrows;
+        3:   75:        matrix3->ncols = matrix2->ncols;
+        3:   76:        matrix3->mat = (double *)malloc(matrix3->nrows * matrix3->ncols * sizeof(double));
+        -:   77:
+       18:   78:        for (int i = 0; i < matrix3->nrows; i++){
+       45:   79:                for (int j = 0; j < matrix3->ncols; j++){
+       30:   80:                        matrix3->mat[matrix3->ncols*i+j] = 0;
+      120:   81:                        for (int k = 0; k < matrix1->ncols; k++){
+       90:   82:                                matrix3->mat[matrix3->ncols*i+j] += matrix1->mat[matrix1->ncols*i+k] * matrix2->mat[matrix2->ncols*k+j];
+        -:   83:                        }
+        -:   84:                }
+        -:   85:        }
+        3:   86:}
+        -:   87:
+        -:   88://linear systems Ax = b; A must be a square matrix non singular
+        -:   89://forward substitution method for lower triangular systems 
+        -:   90://solution x will be in b
+    #####:   91:void forwardSubstitution(struct squareMatrix *A, struct vector *b){
+    #####:   92:        for (int i = 0; i < A->n; i++){
+    #####:   93:                for (int j = 0; j < i; j++){
+    #####:   94:                     b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
+        -:   95:                }
+    #####:   96:                if (A->mat[(A->n) * i + i] == 0) {
+    #####:   97:                        printf("Error: diagonal element 0 in the forward substitution (A singular).\n");
+    #####:   98:                        exit(1);
+        -:   99:                }
+    #####:  100:                b->vect[i] /= A->mat[(A->n) * i + i];
+        -:  101:        }
+    #####:  102:}
+        -:  103:
+        -:  104://linear systems Ax = b; A must be a square matrix non singular
+        -:  105://backward substitution method for upper triangular systems 
+    #####:  106:void backwardSubstitution(struct squareMatrix *A, struct vector *b){
+    #####:  107:        for (int i = (A->n) - 1; i >= 0; i--){
+    #####:  108:                for (int j = i+1; j < A->n; j++){
+    #####:  109:                    b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
+        -:  110:                }
+    #####:  111:                if (A->mat[(A->n) * i + i] == 0) {
+    #####:  112:                        printf("Error: diagonal element 0 in the backward substitution (A singular).\n");
+    #####:  113:                        exit(1);
+        -:  114:                }
+    #####:  115:                b->vect[i] /= A->mat[(A->n) * i + i];
+        -:  116:        }
+    #####:  117:}
+        -:  118:
+        -:  119://compute the inverse with LU pivoting
+    #####:  120:void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse){
+    #####:  121:        inverse->n = A->n;
+    #####:  122:        inverse->mat = (double *)malloc(inverse->n * inverse->n * sizeof(double));
+        -:  123:
+        -:  124:        //PA=LU find L, U, P
+        -:  125:        struct squareMatrix L, U, P;
+    #####:  126:        L.n = A->n;
+    #####:  127:        L.mat = (double *)malloc(L.n * L.n * sizeof(double));
+    #####:  128:        U.n = A->n; 
+    #####:  129:        U.mat = (double *)malloc(U.n * U.n * sizeof(double));
+    #####:  130:        P.n = A->n; 
+    #####:  131:        P.mat = (double *)malloc(P.n * P.n * sizeof(double));
+        -:  132:
+        -:  133:        //initialize L and P (identity matrices) and U = A
+    #####:  134:        for (int i = 0; i < A->n; i++){
+    #####:  135:                for(int j = 0; j < A->n; j++){  
+    #####:  136:                        if(i == j){
+    #####:  137:                                L.mat[(L.n) * i + j] = 1;
+    #####:  138:                                P.mat[(P.n) * i + j] = 1;
+        -:  139:                        } else {
+    #####:  140:                                L.mat[(L.n) * i + j] = 0;
+    #####:  141:                                P.mat[(P.n) * i + j] = 0;
+        -:  142:                        } 
+    #####:  143:                        U.mat[(U.n) * i + j] = A->mat[(A->n) * i + j];
+        -:  144:                }
+        -:  145:        }
+        -:  146:
+        -:  147:        double tmp;
+        -:  148:        int maxIndex; 
+    #####:  149:        for (int k = 0; k < (A->n) - 1; k++){
+    #####:  150:                tmp = U.mat[(U.n)*k+k];
+    #####:  151:                maxIndex = k;
+    #####:  152:                for(int j = k + 1; j < (A->n); j++){
+    #####:  153:                        if(fabs(U.mat[(U.n) * j + k]) > fabs(tmp)){
+    #####:  154:                                tmp = U.mat[(U.n)*j+k];
+    #####:  155:                                maxIndex = j; 
+        -:  156:                        }
+        -:  157:                }
+        -:  158:
+        -:  159:                //check if the pivot is equal to 0
+    #####:  160:                if (fabs(tmp) < 1e-10) {
+    #####:  161:                        printf("Error: Pivot 0 or too small.\n");
+    #####:  162:                        exit(EXIT_FAILURE);
+        -:  163:                }
+        -:  164:
+    #####:  165:                for(int s = k; s < A->n; s++){
+    #####:  166:                        tmp = U.mat[(U.n) * k + s];
+    #####:  167:                        U.mat[(U.n) * k + s] = U.mat[(U.n) * maxIndex + s]; 
+    #####:  168:                        U.mat[(U.n) * maxIndex + s] = tmp;
+        -:  169:                }
+        -:  170:
+    #####:  171:                for(int s = 0; s < A->n; s++){
+    #####:  172:                        tmp = P.mat[(P.n) * k + s];
+    #####:  173:                        P.mat[(P.n) * k + s] = P.mat[(P.n) * maxIndex + s]; 
+    #####:  174:                        P.mat[(P.n) * maxIndex + s] = tmp;
+        -:  175:                }
+        -:  176:
+    #####:  177:                if(k >= 1){
+    #####:  178:                        for(int s = 0; s < k; s++){
+    #####:  179:                                tmp = L.mat[(L.n) * k + s];
+    #####:  180:                                L.mat[(L.n) * k + s] = L.mat[(L.n) * maxIndex + s];
+    #####:  181:                                L.mat[(L.n) * maxIndex + s] = tmp;
+        -:  182:                        }      
+        -:  183:                }
+        -:  184:
+    #####:  185:                for (int i = k+1; i < A->n; i++){
+    #####:  186:                        L.mat[L.n * i + k] = U.mat[U.n * i + k] / U.mat[U.n * k + k];
+    #####:  187:                        for (int s = k; s < A->n; s++){
+    #####:  188:                                U.mat[U.n * i + s] = U.mat[U.n * i + s] - L.mat[L.n * i + k] * U.mat[U.n * k + s];
+        -:  189:                        }
+        -:  190:                }
+        -:  191:        }  
+        -:  192:        
+        -:  193:        //output: L, U, P
+        -:  194:        /*
+        -:  195:        printf("Matrix L:\n");
+        -:  196:        printMatrix(L.mat, L.n, L.n);
+        -:  197:        printf("Matrix U:\n");
+        -:  198:        printMatrix(U.mat, U.n, U.n); 
+        -:  199:        printf("Matrix P:\n");
+        -:  200:        printMatrix(P.mat, P.n, P.n); 
+        -:  201:        */
+        -:  202:        
+        -:  203:        struct vector pe;
+    #####:  204:        pe.length = A->n;
+    #####:  205:        pe.vect = (double *)malloc(pe.length * sizeof(double));
+        -:  206:
+    #####:  207:        for (int i = 0; i < A->n; i++){
+    #####:  208:                for(int k = 0; k < pe.length; k++){
+    #####:  209:                        pe.vect[k] = P.mat[P.n * k + i];
+        -:  210:                }
+    #####:  211:                forwardSubstitution(&L, &pe);
+    #####:  212:                backwardSubstitution(&U, &pe);
+        -:  213:                //copy c in the inverse
+    #####:  214:                for(int k = 0; k < A->n; k++){
+    #####:  215:                        inverse->mat[(A->n) * k + i] = pe.vect[k];
+        -:  216:                }
+        -:  217:        }
+        -:  218:  
+    #####:  219:        free(L.mat);
+    #####:  220:        free(U.mat);
+    #####:  221:        free(P.mat);
+    #####:  222:        free(pe.vect);
+    #####:  223:}

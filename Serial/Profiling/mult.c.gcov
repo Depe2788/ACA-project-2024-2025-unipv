@@ -1,0 +1,55 @@
+        -:    0:Source:mult.c
+        -:    0:Graph:mult-mult.gcno
+        -:    0:Data:mult-mult.gcda
+        -:    0:Runs:5
+        -:    1:#include "functions.h"
+        -:    2:
+        -:    3://compute the matrix multiplication
+        5:    4:int main(int argc, char* argv[])
+        -:    5:{
+        -:    6:        clock_t timer; 
+        -:    7:
+        -:    8:        struct matrix matrix1, matrix2, matrix3;
+        -:    9:        FILE *f;
+        -:   10:
+        5:   11:        srand(time(NULL));
+        -:   12:        //matrix1 initialization M x N
+        5:   13:        matrix1.nrows = M; 
+        5:   14:        matrix1.ncols = N;
+        5:   15:        matrix1.mat = (double *)malloc(matrix1.nrows * matrix1.ncols * sizeof(double));
+        5:   16:        initializeMatrix(matrix1.mat, matrix1.nrows, matrix1.ncols);
+        5:   17:        f = fopen("../Output/matrix1.txt", "w");
+        5:   18:        printMatrixFile(f, matrix1.mat, matrix1.nrows, matrix1.ncols);
+        5:   19:        fclose(f);
+        -:   20:        //matrix2 initialization N x P
+        5:   21:        matrix2.nrows = N; 
+        5:   22:        matrix2.ncols = T;
+        5:   23:        matrix2.mat = (double *)malloc(matrix2.nrows * matrix2.ncols * sizeof(double));
+        5:   24:        initializeMatrix(matrix2.mat, matrix2.nrows, matrix2.ncols);
+        5:   25:        f = fopen("../Output/matrix2.txt", "w");
+        5:   26:        printMatrixFile(f, matrix2.mat, matrix2.nrows, matrix2.ncols);
+        5:   27:        fclose(f);
+        -:   28:
+        -:   29:        //matrix multiplication result M x P
+        5:   30:        timer = clock();
+        5:   31:        matrixMul(&matrix1, &matrix2, &matrix3);
+        5:   32:        timer = clock() - timer; 
+        5:   33:        f = fopen("../Output/matrix3.txt", "w");
+        5:   34:        printMatrixFile(f, matrix3.mat, matrix3.nrows, matrix3.ncols);
+        5:   35:        fclose(f);
+        5:   36:        printf("Time to compute matrix multiplication: %0.6f seconds\n", ((double)timer)/CLOCKS_PER_SEC);
+        -:   37:        
+        5:   38:        free(matrix1.mat);
+        5:   39:        free(matrix2.mat);
+        5:   40:        free(matrix3.mat);
+        -:   41:
+        5:   42:        return 0; 
+        -:   43:}
+        -:   44:
+        -:   45:
+        -:   46:
+        -:   47:
+        -:   48:
+        -:   49:        
+        -:   50:
+        -:   51:
