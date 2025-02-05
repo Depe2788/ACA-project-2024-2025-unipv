@@ -25,10 +25,10 @@ struct vector {
 };
 
 //general
-void printMatrix(double *mat, int nrows, int ncols);
 void initializeMatrix(double *mat, int nrows, int ncols);
+void printMatrix(double *mat, int nrows, int ncols);
 void printMatrixFile(FILE *f, double *mat, int nrows, int ncols);
-void printSquareMatrixtFile(FILE *f, struct squareMatrix matrix);
+void printSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
 void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
 
 //multiplication

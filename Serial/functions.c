@@ -1,21 +1,5 @@
 #include "functions.h"
 
-//Inside the function there is the dynamic allocation, so the address mat changes, pass the argument by reference
-void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix){
-        if (f == NULL) {
-                perror("Invalide file pointer");
-                exit(1);
-        }
-        char buf[100]; 
-        fgets(buf, sizeof(buf), f);
-        sscanf(buf, "%i", &matrix->n);
-        matrix->mat = (double *)malloc((matrix->n) * (matrix->n) * sizeof(double));
-        for(int i = 0; i < ((matrix->n) * (matrix->n)); i++){     
-                fgets(buf, sizeof(buf),f);
-                matrix->mat[i]=atof(buf);
-        }
-}
-
 void initializeMatrix(double *mat, int nrows, int ncols)
 {
         for (int i = 0; i < nrows; i++){
@@ -50,16 +34,33 @@ void printMatrixFile(FILE *f, double *mat, int nrows, int ncols)
         }
 }
 
-void printSquareMatrixtFile(FILE *f, struct squareMatrix matrix)
+//allocate also the matrix
+void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix){
+        if (f == NULL) {
+                perror("Invalide file pointer");
+                exit(1);
+        }
+        char buf[100]; 
+        fgets(buf, sizeof(buf), f);
+        sscanf(buf, "%i", &matrix->n);
+        matrix->mat = (double *)malloc((matrix->n) * (matrix->n) * sizeof(double));
+        for(int i = 0; i < ((matrix->n) * (matrix->n)); i++){     
+                fgets(buf, sizeof(buf),f);
+                matrix->mat[i]=atof(buf);
+        }
+}
+
+//one element on each row
+void printSquareMatrixFile(FILE *f, struct squareMatrix *matrix)
 {
         if (f == NULL) {
                 perror("Invalide file pointer");
                 exit(1);
         }
-        fprintf(f, "%i\n", matrix.n);
-        for(int i = 0; i < matrix.n; i++){   
-                for(int j = 0; j < matrix.n; j++){   
-                        fprintf(f, "%.6f\n", matrix.mat[matrix.n * i + j]);
+        fprintf(f, "%i\n", matrix->n);
+        for(int i = 0; i < matrix->n; i++){   
+                for(int j = 0; j < matrix->n; j++){   
+                        fprintf(f, "%.6f\n", matrix->mat[matrix->n * i + j]);
                 }
         }
 }
@@ -103,6 +104,7 @@ void forwardSubstitution(struct squareMatrix *A, struct vector *b){
 
 //linear systems Ax = b; A must be a square matrix non singular
 //backward substitution method for upper triangular systems 
+//solution x will be in b
 void backwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = (A->n) - 1; i >= 0; i--){
                 for (int j = i+1; j < A->n; j++){
