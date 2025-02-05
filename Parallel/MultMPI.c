@@ -35,12 +35,6 @@ int main(int argc, char* argv[])
 
         int *sendcounts;
         int *displs;
-
-        //terminate useless processes
-        if(my_rank >= matrix1.nrows){
-                MPI_Finalize();
-                exit(0);
-        }
         
         if (my_rank == 0){
 
@@ -61,10 +55,6 @@ int main(int argc, char* argv[])
                 
                 //allocation of matrix3 (result of the mult) 
                 matrix3.mat = (double *)malloc(matrix3.nrows * matrix3.ncols * sizeof(double));
-
-                if(size > matrix1.nrows){
-                        size = matrix1.nrows;
-                }
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
@@ -90,7 +80,7 @@ int main(int argc, char* argv[])
                 }
         }
 
-        //MPI_Scatter ensures that data is sent from 0 only once ready, other processes are so implicitly blocked   
+        //MPI_Scatter ensures that data is sent from 0 only once 0 is ready, other processes are so implicitly blocked   
         MPI_Scatter(sendcounts, 1, MPI_INT, &matrix1Part.nrows, 1, MPI_INT, 0, MPI_COMM_WORLD);
         matrix1Part.nrows /= matrix1Part.ncols; 
         //printf("process %d, matrix1Part.nrows = %d\n", my_rank, matrix1Part.nrows);
@@ -99,11 +89,11 @@ int main(int argc, char* argv[])
         matrix3Part.nrows = matrix1Part.nrows;
         matrix3Part.mat = (double *)malloc(matrix3Part.nrows * matrix3Part.ncols * sizeof(double));
    
-        //send a variable number of rows of matrix1 to each process
+        //process 0 sends a variable number of rows of matrix1 to each process
         MPI_Scatterv(matrix1.mat, sendcounts, displs, MPI_DOUBLE, 
                 matrix1Part.mat, matrix1Part.nrows * matrix1Part.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
-        //broadcast matrix2 to all processes
+        //process 0 sends in broadcast matrix2 to all processes
         MPI_Bcast(matrix2.mat, matrix2.nrows * matrix2.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         matrixMul(&matrix1Part, &matrix2, &matrix3Part);

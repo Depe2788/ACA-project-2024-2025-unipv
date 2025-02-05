@@ -4,7 +4,7 @@
 #include <time.h>
 #include <math.h>
 
-#define M 1000
+#define M 2000
 #define N 1000
 #define T 1000
 
@@ -25,12 +25,15 @@ struct vector {
 };
 
 //general
-void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols);
-void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
 void initializeMatrix(double *mat, int nrows, int ncols);
 void printMatrix(double *mat, int nrows, int ncols);
 void printMatrixFile(FILE *f, double *mat, int nrows, int ncols);
+void readMatrixFile(FILE *f, double **mat, int *nrows, int *ncols);
+void readSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
 void printSquareMatrixFile(FILE *f, struct squareMatrix *matrix);
+void transposeInPlace(struct squareMatrix *matrix);
+void printIntegerVector(int *v, int n);
+void printVectorStruct(struct vector *v);
 
 //multiplication
 void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *matrix3);
@@ -39,5 +42,7 @@ void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *ma
 void forwardSubstitution(struct squareMatrix *A, struct vector *b);
 void backwardSubstitution(struct squareMatrix *A, struct vector *b);
 void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer);
-void printMatrixTranspose(FILE *f, struct squareMatrix *matrix);
+void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer);
+
+
 

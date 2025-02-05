@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
                 timer = MPI_Wtime();
         }
 
-        matrixInversePivotingImproved(&matrix4, &inverse, my_rank, size, &timer);
+        matrixInversePivoting(&matrix4, &inverse, my_rank, size, &timer);
 
         MPI_Barrier(MPI_COMM_WORLD);
         if(my_rank == 0){
