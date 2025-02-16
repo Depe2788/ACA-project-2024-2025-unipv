@@ -43,10 +43,6 @@ int main(int argc, char* argv[])
                 f = fopen("../Output/inverse.txt", "w");
                 //to check that the inverse of the inverse is the original matrix4:
                 //f = fopen("../Input/original.txt", "w");
-                /*
-                printf("inverse: \n");
-                printMatrix(inverse.mat, inverse.n, inverse.n);
-                */
                 printSquareMatrixFile(f, &inverse);
                 fclose(f);
 

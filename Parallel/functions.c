@@ -139,6 +139,7 @@ void forwardSubstitution(struct squareMatrix *A, struct vector *b){
 
 //linear systems Ax = b; A must be a square matrix non singular
 //backward substitution method for upper triangular systems 
+//solution x will be in b
 void backwardSubstitution(struct squareMatrix *A, struct vector *b){
         for (int i = (A->n) - 1; i >= 0; i--){
                 for (int j = i+1; j < A->n; j++){
@@ -196,7 +197,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                 for (int i = 1; i < size; i++) {
                         displs[i] = displs[i - 1] + recvcounts[i - 1];
                 }
-                
+               
                 //initialize L and P (identity matrices) and U = A
                 for (int i = 0; i < A->n; i++){
                         for(int j = 0; j < A->n; j++){  
@@ -247,19 +248,13 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
                                 }
                                 
                         }
-
+                        
                         for (int i = k+1; i < A->n; i++){
                                 L.mat[L.n * i + k] = U.mat[U.n * i + k] / U.mat[U.n * k + k];
                                 for (int s = k; s < A->n; s++){
                                         U.mat[U.n * i + s] = U.mat[U.n * i + s] - L.mat[L.n * i + k] * U.mat[U.n * k + s];
                                 }
                         }
-                        /*
-                        printf("matrix L iter k: %i:\n", k);
-                        printMatrix(L.mat, L.n, L.n);
-                        printf("matrix U iter k: %i:\n", k);
-                        printMatrix(U.mat, U.n, U.n);
-                        */
                 }
         }
 
@@ -285,7 +280,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
         
         MPI_Scatter(displs, 1, MPI_INT, &offset, 1, MPI_INT, 0, MPI_COMM_WORLD);
         offset /= inversePart.ncols;
-        //offset is the index of the initial row of InversePart with respect to the inverse
+        //offset is the index of the initial row of InversePart with respect to the inverse transposed
         //printf("process %d, offset = %d\n", my_rank, offset);
        
         for (int i = 0; i < inversePart.nrows; i++){
@@ -328,7 +323,7 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
         double tmp;
         int maxIndex; 
 
-        int *recvcounts;
+        int *sendcounts;
         int *displs;
         int *sendcountsl;
         int *displsl;
@@ -354,7 +349,7 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
         
         if(my_rank == 0){
 
-                recvcounts = (int *)malloc(size * sizeof(int));
+                sendcounts = (int *)malloc(size * sizeof(int));
                 displs = (int *)malloc(size * sizeof(int));
 
                 sendcountsl = (int *)malloc(size * sizeof(int));
@@ -421,17 +416,17 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
                                 if (i < remaining) {
                                         sendcountsl[i] += 1;  
                                 }
-                                recvcounts[i] = sendcountsl[i] * lines.ncols;
+                                sendcounts[i] = sendcountsl[i] * lines.ncols;
                         }
 
                         displs[0] = 0;
                         displsl[0] = 0;
                         for (int i = 1; i < size; i++) {
-                                displs[i] = displs[i - 1] + recvcounts[i - 1];
+                                displs[i] = displs[i - 1] + sendcounts[i - 1];
                                 displsl[i] = displsl[i - 1] + sendcountsl[i - 1];
                         }
                         /*
-                        printf("!!!!!matrix U k=%i after changing rows:\n", k);
+                        printf("matrix U k=%i after changing rows:\n", k);
                         printMatrix(U.mat, U.n, U.n);
                         printf("\n\n\n");
                         */
@@ -443,43 +438,31 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
                 lPart.vect = (double *)malloc(lPart.length * sizeof(double));
 
                 //Process 0 sends a part of U under the pivot line to each process (lines.mat)
-                MPI_Scatterv(&U.mat[U.n * (k + 1)], recvcounts, displs, MPI_DOUBLE, lines.mat, lines.nrows * lines.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                MPI_Scatterv(&U.mat[U.n * (k + 1)], sendcounts, displs, MPI_DOUBLE, lines.mat, 
+                                lines.nrows * lines.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
                 //Process 0 sends the pivot line in broadcast
                 MPI_Bcast(&U.mat[U.n * k + k], lines.ncols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 
                 for (int i = 0; i < lines.nrows; i++){
                         lPart.vect[i] = lines.mat[lines.ncols * i + k] / U.mat[U.n * k + k];
-                        //lines.mat[lines.ncols * i] = 0;
                         for (int s = 0; s < lines.ncols - k; s++){
-                                lines.mat[lines.ncols * i + k + s] = lines.mat[lines.ncols * i + k + s] - lPart.vect[i] * U.mat[U.n * k + k + s];
+                                lines.mat[lines.ncols * i + k + s] = lines.mat[lines.ncols * i + k + s] 
+                                                                - lPart.vect[i] * U.mat[U.n * k + k + s];
                         }
                 }
-                
-                //printf("vector lPart!!\n");
-                //printVectorStruct(&lPart);
-                //printf("\n");
 
-                //rimettere nella U 
-                MPI_Gatherv(lines.mat, lines.nrows * lines.ncols, MPI_DOUBLE, &U.mat[U.n * (k + 1)], recvcounts, displs,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                //metto lPart nella L 
-                MPI_Gatherv(lPart.vect, lPart.length, MPI_DOUBLE, &L.mat[L.n * k + (k+1)], sendcountsl, displsl,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                /*
-                if(my_rank == 0){
-                        printf("matrix L k=%i:\n", k);
-                        printMatrix(L.mat, L.n, L.n);
-                        printf("matrix U k=%i:\n", k);
-                        printMatrix(U.mat, U.n, U.n);
-                        
-                }
-                */
+                MPI_Gatherv(lines.mat, lines.nrows * lines.ncols, MPI_DOUBLE, &U.mat[U.n * (k + 1)], 
+                                sendcounts, displs,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                MPI_Gatherv(lPart.vect, lPart.length, MPI_DOUBLE, &L.mat[L.n * k + (k+1)], 
+                                sendcountsl, displsl,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
                 free(lines.mat);
                 free(lPart.vect);
         }
 
         if(my_rank == 0){
                 transposeInPlace(&L);
-
                 free(sendcountsl);
                 free(displsl);
         }
@@ -488,6 +471,7 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
         MPI_Bcast(L.mat, L.n * L.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(U.mat, U.n * U.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(P.mat, P.n * P.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
         /*
         if(my_rank == 0){
                 printf("matrix L FINAL:\n");
@@ -499,32 +483,30 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
         }
         */
 
-       //--------
+       //----------------------
         if (my_rank == 0) {
 
                 remaining = A->n % size;
                 div = A->n / size;
                 for (int i = 0; i < size; i++) {
-                        recvcounts[i] = div * A->n;
+                        sendcounts[i] = div * A->n;
                         if (i < remaining) {
-                                recvcounts[i] += A->n;  
+                                sendcounts[i] += A->n;  
                         }
                 }
 
                 displs[0] = 0;
                 for (int i = 1; i < size; i++) {
-                        displs[i] = displs[i - 1] + recvcounts[i - 1];
+                        displs[i] = displs[i - 1] + sendcounts[i - 1];
                 }
         }
 
-        MPI_Scatter(recvcounts, 1, MPI_INT, &inversePart.nrows, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatter(sendcounts, 1, MPI_INT, &inversePart.nrows, 1, MPI_INT, 0, MPI_COMM_WORLD);
         inversePart.nrows /= inversePart.ncols; 
         inversePart.mat = (double *)malloc(inversePart.nrows * inversePart.ncols * sizeof(double));
         
         MPI_Scatter(displs, 1, MPI_INT, &offset, 1, MPI_INT, 0, MPI_COMM_WORLD);
         offset /= inversePart.ncols;
-
-        //------------------------------
 
         for (int i = 0; i < inversePart.nrows; i++){
                 for(int k = 0; k < pe.length; k++){
@@ -539,11 +521,11 @@ void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *
         }
 
         MPI_Gatherv(inversePart.mat, inversePart.nrows * inversePart.ncols, MPI_DOUBLE, inverse->mat, 
-            recvcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         if(my_rank == 0){
                 transposeInPlace(inverse);
-                free(recvcounts);
+                free(sendcounts);
                 free(displs);
         }
 

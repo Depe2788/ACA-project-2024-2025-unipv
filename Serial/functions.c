@@ -95,7 +95,7 @@ void forwardSubstitution(struct squareMatrix *A, struct vector *b){
                      b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Error: diagonal element 0 in the forward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 (A singular).\n");
                         exit(1);
                 }
                 b->vect[i] /= A->mat[(A->n) * i + i];
@@ -111,7 +111,7 @@ void backwardSubstitution(struct squareMatrix *A, struct vector *b){
                     b->vect[i] -= A->mat[(A->n) * i + j] * b->vect[j];
                 }
                 if (A->mat[(A->n) * i + i] == 0) {
-                        printf("Error: diagonal element 0 in the backward substitution (A singular).\n");
+                        printf("Error: diagonal element 0 (A singular).\n");
                         exit(1);
                 }
                 b->vect[i] /= A->mat[(A->n) * i + i];
@@ -201,7 +201,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
         printf("Matrix P:\n");
         printMatrix(P.mat, P.n, P.n); 
         */
-        
+        clock_t timer2 = clock();
         struct vector pe;
         pe.length = A->n;
         pe.vect = (double *)malloc(pe.length * sizeof(double));
@@ -212,12 +212,11 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse)
                 }
                 forwardSubstitution(&L, &pe);
                 backwardSubstitution(&U, &pe);
-                //copy c in the inverse
                 for(int k = 0; k < A->n; k++){
                         inverse->mat[(A->n) * k + i] = pe.vect[k];
                 }
         }
-  
+        printf("time comp inv %f\n", ((double)(clock()-timer2))/CLOCKS_PER_SEC);
         free(L.mat);
         free(U.mat);
         free(P.mat);

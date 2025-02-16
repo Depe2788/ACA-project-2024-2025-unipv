@@ -3,9 +3,9 @@
 #include <time.h>
 #include <math.h>
 
-#define M 1000
-#define N 1000
-#define T 1000
+#define M 10
+#define N 8
+#define T 10
 #define MAX 15
 
 #define FILE_ERROR 1
