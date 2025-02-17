@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
         struct squareMatrix matrix4, inverse;
         
         FILE *f; 
-        double timer;
+        clock_t timer;
 
         MPI_Init(&argc, &argv);
 
@@ -32,21 +32,21 @@ int main(int argc, char* argv[])
 
         MPI_Barrier(MPI_COMM_WORLD);
         if (my_rank == 0){
-                timer = MPI_Wtime();
+                timer = clock();
         }
 
-        matrixInversePivotingImproved(&matrix4, &inverse, my_rank, size, &timer);
+        matrixInversePivotingImproved(&matrix4, &inverse, my_rank, size);
 
         MPI_Barrier(MPI_COMM_WORLD);
         if(my_rank == 0){
-                timer = MPI_Wtime() - timer;
+                timer = clock() - timer; 
                 f = fopen("../Output/inverse.txt", "w");
                 //to check that the inverse of the inverse is the original matrix4:
                 //f = fopen("../Input/original.txt", "w");
                 printSquareMatrixFile(f, &inverse);
                 fclose(f);
 
-                printf("Time to compute the inverse: %.6f\n", timer);
+                printf("Time to compute the inverse: %.6f\n", ((double)timer)/CLOCKS_PER_SEC);
 
                 free(inverse.mat);
                 free(matrix4.mat);

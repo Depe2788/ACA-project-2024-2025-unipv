@@ -41,8 +41,8 @@ void matrixMul(struct matrix *matrix1, struct matrix *matrix2, struct matrix *ma
 //inverse
 void forwardSubstitution(struct squareMatrix *A, struct vector *b);
 void backwardSubstitution(struct squareMatrix *A, struct vector *b);
-void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer);
-void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer);
+void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size);
+void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size);
 
 
 

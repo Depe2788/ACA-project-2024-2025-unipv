@@ -154,7 +154,7 @@ void backwardSubstitution(struct squareMatrix *A, struct vector *b){
 }
 
 //compute the inverse with LU pivoting
-void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer) {
+void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size) {
         
         struct matrix inversePart;
         inversePart.ncols = A->n;
@@ -313,7 +313,7 @@ void matrixInversePivoting(struct squareMatrix *A, struct squareMatrix *inverse,
 
 
 //compute the inverse with LU pivoting
-void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size, double * timer) {
+void matrixInversePivotingImproved(struct squareMatrix *A, struct squareMatrix *inverse, int my_rank, int size) {
         
         struct matrix inversePart;
         inversePart.ncols = A->n;
